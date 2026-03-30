@@ -1700,9 +1700,10 @@ function drawMiniChart(trade, checks) {
       ? +trade.close_price
       : (closes.length ? closes[closes.length - 1] : null);
     if (exitPrice != null) {
-      const shares = inv / entry;
-      const pnl    = (exitPrice - entry) * shares;
-      const pnlPct = (exitPrice - entry) / entry * 100;
+      const shares    = inv / entry;
+      const isBearish = (trade.direction || 'BULLISH').toUpperCase() === 'BEARISH';
+      const pnl       = isBearish ? (entry - exitPrice) * shares : (exitPrice - entry) * shares;
+      const pnlPct    = isBearish ? (entry - exitPrice) / entry * 100 : (exitPrice - entry) / entry * 100;
       const isOpen = trade.status !== 'GREEN' && trade.status !== 'RED';
       pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)${isOpen ? ' *' : ''}`;
       pnlEl.className   = 'mm-val ' + (pnl >= 0 ? 'green' : 'red');
@@ -1873,7 +1874,10 @@ function drawEquityCurve() {
       if (!t.closeDate || t.closeDate > cur) continue;
       if (t.openDate > cur) continue;
       if ((t.status === 'GREEN' || t.status === 'RED') && t.close_price != null) {
-        realizedPnL += t.numShares * (+t.close_price - +t.entry_price);
+        const tDir = (t.direction || 'BULLISH').toUpperCase();
+        realizedPnL += tDir === 'BEARISH'
+          ? t.numShares * (+t.entry_price - +t.close_price)
+          : t.numShares * (+t.close_price - +t.entry_price);
       }
       // EXPIRED: 0 P&L — invested_amount is returned, no gain/loss
     }
@@ -1881,7 +1885,13 @@ function drawEquityCurve() {
     // Open trades on this day
     const openTrades  = tradeInfo.filter(t => isOpenOnDay(t, cur));
     const lockedMoney = openTrades.reduce((s, t) => s + +t.invested_amount, 0);
-    const openValue   = openTrades.reduce((s, t) => s + t.numShares * getLatestClose(t, cur), 0);
+    const openValue   = openTrades.reduce((s, t) => {
+      const latest = getLatestClose(t, cur);
+      const tDir   = (t.direction || 'BULLISH').toUpperCase();
+      return s + (tDir === 'BEARISH'
+        ? t.numShares * (2 * +t.entry_price - latest)
+        : t.numShares * latest);
+    }, 0);
 
     // Line 3: Cash = capital + realized P&L − money locked in open positions
     const cash = capital + realizedPnL - lockedMoney;
