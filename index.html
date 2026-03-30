@@ -2074,25 +2074,31 @@ function drawEquityCurve() {
     }
   }
 
-  // Best / worst month (visible range)
+  // Best / worst month (always full range, not limited to visible window)
   const byMonth = {};
-  visDates.forEach((d, i) => {
+  dateSeries.forEach((d, i) => {
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!byMonth[key]) byMonth[key] = [];
-    byMonth[key].push({ port: visPortfolio[i], cap: visCapital[i], d });
+    byMonth[key].push({ port: portfolioArr[i], cap: capitalArr[i], d });
   });
 
   let bestRet = -Infinity, bestLabel = '—';
   let worstRet = Infinity, worstLabel = '—';
   const validMonthKeys = Object.keys(byMonth).filter(k => {
     const pts = byMonth[k];
-    return pts.length >= 2 && pts[0].cap > 0;
+    return pts.length >= 2 && pts.some(p => p.cap > 0);
   });
 
   for (const key of validMonthKeys) {
     const pts = byMonth[key];
-    const ret = (pts[pts.length - 1].port - pts[0].port) / pts[0].cap * 100;
-    const lbl = pts[0].d.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+    // Use first data point that has capital > 0 as the base
+    const base = pts.find(p => p.cap > 0) || pts[0];
+    if (!base.cap) continue;
+    const last = pts[pts.length - 1];
+    // Measure only trading P&L (exclude capital injections)
+    // ret = Δ(portfolio - capital) / base_capital
+    const ret = ((last.port - last.cap) - (base.port - base.cap)) / base.cap * 100;
+    const lbl = base.d.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
     if (ret > bestRet)  { bestRet = ret;  bestLabel = lbl; }
     if (ret < worstRet) { worstRet = ret; worstLabel = lbl; }
   }
@@ -2112,7 +2118,7 @@ function drawEquityCurve() {
   const bestEl = document.getElementById('eq-best');
   if (bestRet > -Infinity) {
     bestEl.textContent = (bestRet >= 0 ? '+' : '') + bestRet.toFixed(1) + '%';
-    bestEl.className   = 'eq-val green';
+    bestEl.className   = 'eq-val ' + (bestRet >= 0 ? 'green' : bestRet >= -5 ? 'yellow' : 'red');
     document.getElementById('eq-best-sub').textContent = bestLabel;
   } else {
     bestEl.textContent = '—';
