@@ -1838,8 +1838,13 @@ function drawEquityCurve() {
   // Is this trade open on calendar day `day`?
   function isOpenOnDay(t, day) {
     if (!t.openDate || t.openDate > day) return false;
-    if (!t.closeDate) return true;          // still open today
-    return t.closeDate > day;               // was open, not yet closed
+    // Only GREEN/RED trades use closeDate to mark when they were done.
+    // OPEN/PENDING trades are always locked regardless of closed_at
+    // (closed_at is a modification timestamp, not a close date).
+    const isClosed = t.status === 'GREEN' || t.status === 'RED';
+    if (!isClosed) return true;
+    if (!t.closeDate) return true;
+    return t.closeDate > day;
   }
 
   // Best available close price for an open trade on day `day`
