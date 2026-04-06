@@ -461,6 +461,20 @@
     .src-badge.DIVIDEND { background:rgba(0,212,170,.15);  color:var(--green); }
     .src-badge.EARNINGS { background:rgba(255,71,87,.15);  color:var(--red); }
 
+    .phase-badge {
+      display:inline-flex; align-items:center;
+      padding:.14rem .5rem; border-radius:3px;
+      font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+      background:rgba(155,92,255,.15); color:#b491ff; border:1px solid rgba(155,92,255,.3);
+      white-space:nowrap;
+    }
+    .phase-badge.PRE    { background:rgba(136,136,153,.15); color:var(--gray); border-color:rgba(136,136,153,.3); }
+    .phase-badge.ATLAS  { background:rgba(155,92,255,.15);  color:#b491ff;      border-color:rgba(155,92,255,.35); }
+    .phase-badge.SENTINEL { background:rgba(0,180,216,.15); color:var(--blue);  border-color:rgba(0,180,216,.3); }
+    .phase-badge.HERMES { background:rgba(255,209,102,.15); color:var(--yellow);border-color:rgba(255,209,102,.3); }
+    .phase-badge.AEGIS  { background:rgba(0,212,170,.15);   color:var(--green); border-color:rgba(0,212,170,.3); }
+    .phase-badge.OLYMPUS{ background:rgba(255,71,87,.15);   color:var(--red);   border-color:rgba(255,71,87,.3); }
+
     .r-pos { color:var(--green); }
     .r-neg { color:var(--red); }
     .r-nil { color:var(--text3); }
@@ -740,6 +754,12 @@
         </select>
       </div>
       <div class="f-group">
+        <div class="f-lbl">Fase</div>
+        <select id="f-phase" onchange="applyFilters()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="f-group">
         <div class="f-lbl">Desde</div>
         <input type="date" id="f-from" onchange="applyFilters()" />
       </div>
@@ -966,6 +986,12 @@ async function loadData() {
       source: t.source ? t.source.toUpperCase().trim() : t.source,
       status: t.status ? t.status.toUpperCase().trim() : t.status,
     }));
+    // Poblar dropdown de fases dinámicamente
+    const phases = [...new Set(allTrades.map(t => t.phase || 'Pre-Atlas'))].sort();
+    const phaseSel = document.getElementById('f-phase');
+    phaseSel.innerHTML = '<option value="">Todas</option>' +
+      phases.map(p => `<option value="${p}">${p}</option>`).join('');
+
     allChecks  = ch.data || [];
     allStats   = st.data || [];
     allCapital = cap.error ? [] : (cap.data || []);
@@ -1020,6 +1046,7 @@ function applyFilters() {
   const src      = document.getElementById('f-src').value;
   const st       = document.getElementById('f-st').value;
   const dir      = document.getElementById('f-dir').value;
+  const phase    = document.getElementById('f-phase').value;
   const from     = document.getElementById('f-from').value;
   const to       = document.getElementById('f-to').value;
   const minScore = parseInt(document.getElementById('f-score').value) || 0;
@@ -1028,6 +1055,7 @@ function applyFilters() {
     if (src && t.source !== src) return false;
     if (st  && t.status !== st)  return false;
     if (dir && (t.direction || 'BULLISH').toUpperCase() !== dir) return false;
+    if (phase && (t.phase || 'Pre-Atlas') !== phase) return false;
     if (minScore > 0 && (t.score == null || t.score < minScore)) return false;
     if (from) {
       if (new Date(t.recommended_at) < new Date(from)) return false;
@@ -1050,6 +1078,7 @@ function resetFilters() {
   document.getElementById('f-src').value   = '';
   document.getElementById('f-st').value    = '';
   document.getElementById('f-dir').value   = '';
+  document.getElementById('f-phase').value = '';
   document.getElementById('f-from').value  = '';
   document.getElementById('f-to').value    = '';
   document.getElementById('f-score').value = 0;
@@ -1345,6 +1374,7 @@ const COLS = [
   { key:'timeframe',      label:'TF' },
   { key:'source',         label:'Fuente' },
   { key:'status',         label:'Estado' },
+  { key:'phase',          label:'Fase' },
   { key:'score',          label:'Score' },
   { key:'entry_price',    label:'Entrada' },
   { key:'stop_loss',      label:'Stop Loss' },
@@ -1441,6 +1471,17 @@ function tradeRow(t) {
       <td><span class="tf-badge ${tf}">${tf}</span></td>
       <td><span class="src-badge ${esc(t.source)}">${esc(t.source)}</span></td>
       <td><span class="badge ${esc(t.status)}">${esc(t.status)}</span></td>
+      <td>${(() => {
+        const ph = t.phase || 'Pre-Atlas';
+        const cls = ph.toUpperCase().startsWith('PRE') ? 'PRE'
+                  : ph.toUpperCase().startsWith('ATLAS') ? 'ATLAS'
+                  : ph.toUpperCase().startsWith('SENTINEL') ? 'SENTINEL'
+                  : ph.toUpperCase().startsWith('HERMES') ? 'HERMES'
+                  : ph.toUpperCase().startsWith('AEGIS') ? 'AEGIS'
+                  : ph.toUpperCase().startsWith('OLYMPUS') ? 'OLYMPUS'
+                  : '';
+        return `<span class="phase-badge ${cls}">${esc(ph)}</span>`;
+      })()}</td>
       <td>
         <div class="score-cell">
           <span>${t.score != null ? (+t.score).toFixed(0) : '—'}</span>
