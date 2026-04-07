@@ -1905,6 +1905,9 @@ function drawEquityCurve() {
 
   for (let d = new Date(firstDate); d <= today; d.setDate(d.getDate() + 1)) {
     const cur = new Date(d);
+    // Skip weekends — el mercado US está cerrado sábado y domingo
+    const dow = cur.getDay();
+    if (dow === 0 || dow === 6) continue;
     dateSeries.push(new Date(cur));
     labels.push(cur.toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: '2-digit' }));
 
