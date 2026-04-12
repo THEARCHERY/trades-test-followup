@@ -406,13 +406,19 @@ function renderAll(){
 // ── 01 OVERVIEW ──────────────────────────────────
 function renderOverview(){
   const b=widget({id:'w01',num:1,title:'COMMAND OVERVIEW',x:0,y:0,w:680,h:178});
-  const cl=CL(),op=OP(),all=T();
+  const cl=CL(),op=OP();
   const totalR=cl.reduce((s,t)=>s+(+t.r_multiple||0),0);
   const wr=cl.length?cl.filter(t=>t.status==='GREEN').length/cl.length*100:0;
   const wins=cl.filter(t=>t.status==='GREEN');
   const loss=cl.filter(t=>t.status==='RED');
-  const pf=loss.length&&wins.length?(wins.reduce((s,t)=>s+(+t.r_multiple||0),0)/Math.abs(loss.reduce((s,t)=>s+(+t.r_multiple||0),0))):0;
   const totalPnL=totalPortfolioPnL();
+
+  // Expectancy: average monetary P&L per closed trade
+  const pnlValues=cl.map(t=>tradePnL(t)).filter(v=>v!==null);
+  const expectancy=pnlValues.length?pnlValues.reduce((s,v)=>s+v,0)/pnlValues.length:null;
+
+  // Capital en riesgo: sum of invested_amount for open trades
+  const capitalRiesgo=op.reduce((s,t)=>s+(+t.invested_amount||0),0);
 
   b.innerHTML=`<div class="stat-row x4" style="height:100%">
     <div class="stat-block amber">
@@ -426,9 +432,12 @@ function renderOverview(){
       <div class="s-sub">${wins.length}W · ${loss.length}L</div>
     </div>
     <div class="stat-block blue">
-      <div class="s-lbl">Profit Factor</div>
-      <div class="s-val blue">${pf.toFixed(2)}</div>
-      <div class="s-sub">avg ${cl.length?((+totalR/cl.length).toFixed(2)):0}R / trade</div>
+      <div class="s-lbl">Capital en Riesgo</div>
+      <div class="s-val blue" style="font-size:16px">${capitalRiesgo?fmtEur(capitalRiesgo,0):'—'}</div>
+      <div class="s-sub" style="display:flex;justify-content:space-between;margin-top:6px">
+        <span style="font-size:8px;color:var(--muted2);letter-spacing:1px">EXPECTANCY</span>
+        <span style="font-size:11px;font-weight:700;color:${expectancy===null?'var(--muted2)':expectancy>=0?'var(--green)':'var(--red)'}">${expectancy===null?'—':fmtEur(expectancy,2)+'/op'}</span>
+      </div>
     </div>
     <div class="stat-block ${totalPnL===null?'blue':totalPnL>=0?'green':'red'}">
       <div class="s-lbl">Total P&amp;L</div>
