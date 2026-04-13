@@ -627,7 +627,7 @@ function renderLog(){
 
 // ── 05 MONTHLY P&L HEATMAP ────────────────────────
 function renderHeatmap(){
-  const b=widget({id:'w05',num:5,title:'MONTHLY P&L HEATMAP',x:0,y:502,w:600,h:280});
+  const b=widget({id:'w05',num:5,title:'MONTHLY P&L HEATMAP',x:0,y:532,w:600,h:280});
   const cl=CL().filter(t=>t.recommended_at);
   if(!cl.length){b.innerHTML='<div class="empty"><span>🗓</span>NO DATA</div>';return;}
 
@@ -674,7 +674,7 @@ function renderHeatmap(){
 
 // ── 06 R BARS ─────────────────────────────────────
 function renderRBars(){
-  const b=widget({id:'w06',num:6,title:'R DISTRIBUTION',x:610,y:502,w:380,h:280});
+  const b=widget({id:'w06',num:6,title:'R DISTRIBUTION',x:610,y:532,w:380,h:280});
   const cl=CL().filter(t=>t.r_multiple!=null);
   if(!cl.length){b.innerHTML='<div class="empty"><span>📊</span>NO DATA</div>';return;}
 
@@ -696,7 +696,7 @@ function renderRBars(){
 
 // ── 07 PHASE BREAKDOWN ────────────────────────────
 function renderPhases(){
-  const b=widget({id:'w07',num:7,title:'PHASE PERFORMANCE',x:1000,y:502,w:340,h:280});
+  const b=widget({id:'w07',num:7,title:'PHASE PERFORMANCE',x:1000,y:532,w:340,h:280});
   const cl=CL();
   const phases=[...new Set(cl.map(t=>t.phase||'—'))].sort();
   if(!phases.length){b.innerHTML='<div class="empty"><span>⚡</span>NO PHASE DATA</div>';return;}
