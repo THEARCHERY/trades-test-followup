@@ -566,7 +566,7 @@ function renderEquity(){
 // ── 03 OPEN POSITIONS ─────────────────────────────
 function renderOpen(){
   const op=OP();
-  const b=widget({id:'w03',num:3,title:'ACTIVE POSITIONS',status:`${op.length} OPEN`,x:0,y:190,w:460,h:300,bodyClass:'p0 scroll'});
+  const b=widget({id:'w03',num:3,title:'ACTIVE POSITIONS',status:`${op.length} OPEN`,x:0,y:220,w:460,h:300,bodyClass:'p0 scroll'});
   if(!op.length){b.innerHTML='<div class="empty"><span>◎</span>NO ACTIVE POSITIONS</div>';return;}
   const maxAbsPnl=Math.max(...op.map(t=>{ const p=tradePnL(t); return p!==null?Math.abs(p):0; }),1);
   b.innerHTML=op.map(t=>{
