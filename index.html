@@ -1051,7 +1051,7 @@ function openTradeDetail(t){
         animation:false,responsive:true,maintainAspectRatio:false,
         plugins:{
           legend:{display:true,position:'top',labels:{color:'#4a6080',font:{size:8,family:'Courier New'},boxWidth:12,padding:8}},
-          tooltip:{mode:'index',intersect:false,filter:item=>item.datasetIndex===0,callbacks:{title:()=>'',label:c=>`€${fmtP(c.raw)}`}}
+          tooltip:{mode:'index',intersect:false,filter:item=>item.datasetIndex===0,callbacks:{title:items=>items[0]?.label||'',label:c=>`€${fmtP(c.raw)}`}}
         },
         scales:{
           x:{ticks:{color:'#3d4a5e',font:{size:8,family:'Courier New'},maxTicksLimit:8},grid:{color:'rgba(30,37,53,.5)'},border:{display:false}},
