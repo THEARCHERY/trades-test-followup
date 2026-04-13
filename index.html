@@ -889,7 +889,7 @@ function openTradeDetail(t){
   // Default position: right of op log (w04) using CSS values only
   if(dx===null){
     const w04=document.getElementById('w04');
-    dx=w04?+w04.style.left.replace('px','')++(w04.style.width.replace('px',''))+20:1460;
+    dx=w04?(parseInt(w04.style.left)+parseInt(w04.style.width)+20):1460;
     dy=w04?+w04.style.top.replace('px',''):190;
   }
 
