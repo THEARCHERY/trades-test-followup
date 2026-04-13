@@ -604,7 +604,7 @@ function renderLog(){
         <td>${t.phase?`<span class="phase-lbl">${esc(t.phase)}</span>`:'—'}</td>
         <td style="color:${(t.direction||'').toUpperCase()==='BEARISH'?'var(--red)':'var(--green)'};font-size:9px;letter-spacing:1px">${(t.direction||'BULLISH').toUpperCase()}</td>
         <td><span class="badge ${t.status}">${t.status}</span></td>
-        <td style="color:var(--green)">${t.take_profit?'€'+fmtP(t.take_profit):'—'}</td>
+        <td style="color:var(--muted2)">${t.take_profit?'€'+fmtP(t.take_profit):'—'}</td>
         <td style="color:var(--muted2)">${t.close_price?'€'+fmtP(t.close_price):'—'}</td>
         <td style="color:var(--muted2)">${t.stop_loss?'€'+fmtP(t.stop_loss):'—'}</td>
         <td style="color:var(--muted2)">${t.invested_amount?'€'+fmtP(t.invested_amount):'—'}</td>
@@ -1033,22 +1033,24 @@ function openTradeDetail(t){
       type:'line',
       data:{
         labels,
-        datasets:[{
-          label:'Precio',
-          data:closes,
-          borderColor:'#22d3ee',
-          borderWidth:1.5,
-          fill:false,
-          tension:.2,
-          pointRadius:closes.map((_,i)=>i===closes.length-1?4:2),
-          pointHoverRadius:4,
-          pointBackgroundColor:closes.map((_,i)=>i===closes.length-1?lineColor:'#22d3ee'),
-        }]
+        datasets:[
+          {label:'Precio',data:closes,borderColor:'#22d3ee',borderWidth:1.5,
+           fill:false,tension:.2,
+           pointRadius:closes.map((_,i)=>i===closes.length-1?4:2),
+           pointHoverRadius:4,
+           pointBackgroundColor:closes.map((_,i)=>i===closes.length-1?lineColor:'#22d3ee')},
+          ...(entry?[{label:'Entry',data:labels.map(()=>entry),borderColor:'#f59e0b',
+            borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,tension:0}]:[]),
+          ...(sl?[{label:'Stop',data:labels.map(()=>sl),borderColor:'#ef4444',
+            borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,tension:0}]:[]),
+          ...(takeProfitTarget?[{label:'TP',data:labels.map(()=>takeProfitTarget),borderColor:'#22c55e',
+            borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,tension:0}]:[]),
+        ]
       },
       options:{
         animation:false,responsive:true,maintainAspectRatio:false,
         plugins:{
-          legend:{display:false},
+          legend:{display:true,position:'top',labels:{color:'#4a6080',font:{size:8,family:'Courier New'},boxWidth:12,padding:8}},
           tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` €${fmtP(c.raw)}`}}
         },
         scales:{
