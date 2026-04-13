@@ -728,31 +728,27 @@ function latestCheckPrice(trade_id){
 }
 
 // Current value of a single trade position (what it's worth now)
-// GREEN  → shares × close_price (TP hit)
-// RED    → shares × stop_loss   (stop hit)
-// OPEN   → shares × latest day_close
-// PENDING→ invested_amount      (cash not yet deployed)
+// Usa la misma lógica que la equity curve:
+//   BULLISH → shares × price
+//   BEARISH → shares × (2×entry − price)   [simétrico respecto a entry]
 function tradeCurrentValue(t){
   const entry=+t.entry_price||0;
   const invested=+t.invested_amount||0;
-  const status=t.status; // already uppercased
+  const status=t.status;
+  const dir=(t.direction||'BULLISH').toUpperCase();
 
   if(status==='PENDING') return invested||null;
   if(!entry||!invested) return null;
   const shares=invested/entry;
 
-  if(status==='GREEN'){
-    const tp=+t.close_price||0;
-    return tp ? shares*tp : null;
+  function val(price){
+    if(!price) return null;
+    return dir==='BEARISH' ? shares*(2*entry-price) : shares*price;
   }
-  if(status==='RED'){
-    const sl=+t.stop_loss||0;
-    return sl ? shares*sl : null;
-  }
-  if(status==='OPEN'){
-    const last=latestCheckPrice(t.id);
-    return last ? shares*last : null;
-  }
+
+  if(status==='GREEN') return val(+t.close_price||0);
+  if(status==='RED')   return val(+t.stop_loss||0);
+  if(status==='OPEN')  return val(latestCheckPrice(t.id));
   return null;
 }
 
