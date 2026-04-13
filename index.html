@@ -595,7 +595,7 @@ function renderLog(){
   b.innerHTML=`<table class="tbl">
     <thead><tr>
       <th>Ticker</th><th>Phase</th><th>Direction</th><th>Status</th>
-      <th>TP</th><th>Stop</th><th>Invested</th><th>P&amp;L</th><th>Opened</th><th>Closed</th>
+      <th>Take Profit</th><th>Cierre</th><th>Stop</th><th>Invested</th><th>P&amp;L</th><th>Opened</th><th>Closed</th>
     </tr></thead>
     <tbody>${cl.map(t=>{
       const pnl=tradePnL(t);
@@ -604,6 +604,7 @@ function renderLog(){
         <td>${t.phase?`<span class="phase-lbl">${esc(t.phase)}</span>`:'—'}</td>
         <td style="color:${(t.direction||'').toUpperCase()==='BEARISH'?'var(--red)':'var(--green)'};font-size:9px;letter-spacing:1px">${(t.direction||'BULLISH').toUpperCase()}</td>
         <td><span class="badge ${t.status}">${t.status}</span></td>
+        <td style="color:var(--green)">${t.take_profit?'€'+fmtP(t.take_profit):'—'}</td>
         <td style="color:var(--muted2)">${t.close_price?'€'+fmtP(t.close_price):'—'}</td>
         <td style="color:var(--muted2)">${t.stop_loss?'€'+fmtP(t.stop_loss):'—'}</td>
         <td style="color:var(--muted2)">${t.invested_amount?'€'+fmtP(t.invested_amount):'—'}</td>
@@ -901,7 +902,8 @@ function openTradeDetail(t){
   const dir=(t.direction||'BULLISH').toUpperCase();
   const entry=+t.entry_price||0;
   const sl=+t.stop_loss||0;
-  const tp=+t.close_price||0;
+  const takeProfitTarget=+t.take_profit||0;  // objetivo marcado
+  const cierre=+t.close_price||0;            // precio real de cierre
   const invested=+t.invested_amount||0;
   const shares=entry&&invested?invested/entry:0;
 
@@ -967,11 +969,12 @@ function openTradeDetail(t){
       </div>
 
       <!-- Price levels -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
-        <div><div class="s-lbl">Entry</div><div style="font-size:13px;font-weight:700;color:var(--amber)">€${fmtP(entry)}</div></div>
-        <div><div class="s-lbl">Stop</div><div style="font-size:13px;font-weight:700;color:var(--red)">€${sl?fmtP(sl):'—'}</div></div>
-        <div><div class="s-lbl">TP / Cierre</div><div style="font-size:13px;font-weight:700;color:var(--green)">€${tp?fmtP(tp):'—'}</div></div>
-        <div><div class="s-lbl">P&amp;L</div><div style="font-size:13px;font-weight:700;color:${pnl===null?'var(--muted2)':pnl>=0?'var(--green)':'var(--red)'}">${pnl===null?'—':fmtEur(pnl,2)}${pnlPct!==null?' ('+( pnlPct>=0?'+':'')+pnlPct.toFixed(1)+'%)':''}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div><div class="s-lbl">Entry</div><div style="font-size:12px;font-weight:700;color:var(--amber)">€${entry?fmtP(entry):'—'}</div></div>
+        <div><div class="s-lbl">Stop Loss</div><div style="font-size:12px;font-weight:700;color:var(--red)">€${sl?fmtP(sl):'—'}</div></div>
+        <div><div class="s-lbl">Take Profit</div><div style="font-size:12px;font-weight:700;color:var(--green)">€${takeProfitTarget?fmtP(takeProfitTarget):'—'}</div></div>
+        <div><div class="s-lbl">Cierre</div><div style="font-size:12px;font-weight:700;color:var(--muted2)">€${cierre?fmtP(cierre):'—'}</div></div>
+        <div><div class="s-lbl">P&amp;L</div><div style="font-size:12px;font-weight:700;color:${pnl===null?'var(--muted2)':pnl>=0?'var(--green)':'var(--red)'}">${pnl===null?'—':fmtEur(pnl,2)}${pnlPct!==null?' ('+( pnlPct>=0?'+':'')+pnlPct.toFixed(1)+'%)':''}</div></div>
       </div>
 
       <!-- Chart -->
@@ -1005,10 +1008,23 @@ function openTradeDetail(t){
   };
 
   // Draw chart
-  if(!checks.length) return;
+  if(!checks.length&&!cierre) return;
+
+  // Build labels + closes, append close price as final point if trade is closed
   const labels=checks.map(c=>c.checked_at.slice(0,10));
   const closes=checks.map(c=>+c.day_close);
-  const pnlColor=pnl===null?'#f59e0b':pnl>=0?'#22c55e':'#ef4444';
+  if(cierre&&t.closed_at){
+    const closeDate=t.closed_at.slice(0,10);
+    // only add if not already the last point
+    if(!labels.length||labels[labels.length-1]!==closeDate){
+      labels.push(closeDate);
+      closes.push(cierre);
+    } else {
+      closes[closes.length-1]=cierre; // overwrite last with exact close
+    }
+  }
+
+  const lineColor=pnl===null?'#f59e0b':pnl>=0?'#22c55e':'#ef4444';
 
   requestAnimationFrame(()=>{
     const ctx=document.getElementById('detail-chart-canvas');
@@ -1017,22 +1033,23 @@ function openTradeDetail(t){
       type:'line',
       data:{
         labels,
-        datasets:[
-          {label:'Precio',data:closes,borderColor:'#22d3ee',borderWidth:1.5,
-           fill:false,tension:.2,pointRadius:2,pointHoverRadius:4,pointBackgroundColor:'#22d3ee'},
-          ...(entry?[{label:'Entry',data:labels.map(()=>entry),borderColor:'#f59e0b',
-            borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,tension:0}]:[]),
-          ...(sl?[{label:'Stop',data:labels.map(()=>sl),borderColor:'#ef4444',
-            borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,tension:0}]:[]),
-          ...(tp?[{label:'TP',data:labels.map(()=>tp),borderColor:'#22c55e',
-            borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false,tension:0}]:[]),
-        ]
+        datasets:[{
+          label:'Precio',
+          data:closes,
+          borderColor:'#22d3ee',
+          borderWidth:1.5,
+          fill:false,
+          tension:.2,
+          pointRadius:closes.map((_,i)=>i===closes.length-1?4:2),
+          pointHoverRadius:4,
+          pointBackgroundColor:closes.map((_,i)=>i===closes.length-1?lineColor:'#22d3ee'),
+        }]
       },
       options:{
         animation:false,responsive:true,maintainAspectRatio:false,
         plugins:{
-          legend:{display:true,position:'top',labels:{color:'#4a6080',font:{size:8,family:'Courier New'},boxWidth:12,padding:8}},
-          tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` ${c.dataset.label}: €${fmtP(c.raw)}`}}
+          legend:{display:false},
+          tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` €${fmtP(c.raw)}`}}
         },
         scales:{
           x:{ticks:{color:'#3d4a5e',font:{size:8,family:'Courier New'},maxTicksLimit:8},grid:{color:'rgba(30,37,53,.5)'},border:{display:false}},
