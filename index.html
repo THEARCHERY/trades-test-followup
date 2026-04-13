@@ -582,7 +582,7 @@ function renderOpen(){
       <div class="pos-dir" style="color:${dir==='BULL'?'var(--green)':'var(--red)'}">${dir}</div>
       <div class="pos-bar-outer"><div class="pos-bar-inner" style="width:${pct}%;background:${col}"></div></div>
       <div class="pos-r" style="color:var(--muted2);font-size:9px;width:50px;text-align:right">${(+t.r_multiple||0)>=0?'+':''}${(+t.r_multiple||0).toFixed(2)}R</div>
-      <div class="pos-pnl" style="color:${col};font-size:11px;font-weight:700;width:68px;text-align:right">${fmtEur(pnl)}</div>
+      <div class="pos-pnl" style="color:${col};font-size:11px;font-weight:700;width:68px;text-align:right">${fmtEur(pnl,2)}</div>
     </div>`;
   }).join('');
 }
@@ -608,7 +608,7 @@ function renderLog(){
         <td style="color:var(--muted2)">${t.close_price?'€'+fmtP(t.close_price):'—'}</td>
         <td style="color:var(--muted2)">${t.stop_loss?'€'+fmtP(t.stop_loss):'—'}</td>
         <td class="${r>=0?'pos':'neg'}">${r>=0?'+':''}${r.toFixed(2)}R</td>
-        <td style="font-weight:700;color:${pnl===null?'var(--muted2)':pnl>=0?'var(--green)':'var(--red)'}">${fmtEur(pnl)}</td>
+        <td style="font-weight:700;color:${pnl===null?'var(--muted2)':pnl>=0?'var(--green)':'var(--red)'}">${fmtEur(pnl,2)}</td>
         <td style="color:var(--muted)">${fmtDate(t.recommended_at)}</td>
         <td style="color:var(--muted)">${fmtDate(t.closed_at)}</td>
       </tr>`;
