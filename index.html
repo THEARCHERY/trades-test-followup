@@ -590,7 +590,7 @@ function renderOpen(){
 // ── 04 TRADE LOG ──────────────────────────────────
 function renderLog(){
   const cl=CL().sort((a,b)=>new Date(b.closed_at||0)-new Date(a.closed_at||0)).slice(0,30);
-  const b=widget({id:'w04',num:4,title:'OP LOG — LAST 30',x:470,y:190,w:970,h:300,bodyClass:'p0 scroll'});
+  const b=widget({id:'w04',num:4,title:'OP LOG — LAST 30',x:470,y:220,w:970,h:300,bodyClass:'p0 scroll'});
   if(!cl.length){b.innerHTML='<div class="empty"><span>📋</span>NO CLOSED OPS</div>';return;}
   b.innerHTML=`<table class="tbl">
     <thead><tr>
