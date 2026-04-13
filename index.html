@@ -595,7 +595,7 @@ function renderLog(){
   b.innerHTML=`<table class="tbl">
     <thead><tr>
       <th>Ticker</th><th>Phase</th><th>Direction</th><th>Status</th>
-      <th>TP</th><th>Stop</th><th>R</th><th>P&amp;L</th><th>Opened</th><th>Closed</th>
+      <th>TP</th><th>Stop</th><th>Invested</th><th>P&amp;L</th><th>Opened</th><th>Closed</th>
     </tr></thead>
     <tbody>${cl.map(t=>{
       const r=+t.r_multiple||0;
@@ -607,7 +607,7 @@ function renderLog(){
         <td><span class="badge ${t.status}">${t.status}</span></td>
         <td style="color:var(--muted2)">${t.close_price?'€'+fmtP(t.close_price):'—'}</td>
         <td style="color:var(--muted2)">${t.stop_loss?'€'+fmtP(t.stop_loss):'—'}</td>
-        <td class="${r>=0?'pos':'neg'}">${r>=0?'+':''}${r.toFixed(2)}R</td>
+        <td style="color:var(--muted2)">${t.invested_amount?'€'+fmtP(t.invested_amount):'—'}</td>
         <td style="font-weight:700;color:${pnl===null?'var(--muted2)':pnl>=0?'var(--green)':'var(--red)'}">${fmtEur(pnl,2)}</td>
         <td style="color:var(--muted)">${fmtDate(t.recommended_at)}</td>
         <td style="color:var(--muted)">${fmtDate(t.closed_at)}</td>
