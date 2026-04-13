@@ -876,14 +876,22 @@ function setStatus(txt,cls){
 let detailChart=null;
 
 function openTradeDetail(t){
-  // Remove existing detail widget
+  // Remember position of existing detail widget if open
   const old=document.getElementById('w-detail');
-  if(old){ if(detailChart){detailChart.destroy();detailChart=null;} old.remove(); }
+  let dx=null, dy=null;
+  if(old){
+    dx=+old.style.left.replace('px','');
+    dy=+old.style.top.replace('px','');
+    if(detailChart){detailChart.destroy();detailChart=null;}
+    old.remove();
+  }
 
-  // Position: to the right of op log (w04)
-  const w04=document.getElementById('w04');
-  const dx=w04?+w04.style.left.replace('px','')+w04.offsetWidth/window.devicePixelRatio+20:470;
-  const dy=w04?+w04.style.top.replace('px',''):190;
+  // Default position: right of op log (w04) using CSS values only
+  if(dx===null){
+    const w04=document.getElementById('w04');
+    dx=w04?+w04.style.left.replace('px','')++(w04.style.width.replace('px',''))+20:1460;
+    dy=w04?+w04.style.top.replace('px',''):190;
+  }
 
   const checks=allChecks
     .filter(c=>c.trade_id===t.id&&c.day_close!=null)
@@ -941,7 +949,7 @@ function openTradeDetail(t){
 
   const el=document.createElement('div');
   el.className='w'; el.id='w-detail';
-  el.style.cssText=`left:${dx}px;top:${dy}px;width:520px;height:490px;z-index:60;`;
+  el.style.cssText=`left:${dx}px;top:${dy}px;width:580px;height:600px;z-index:60;`;
   el.innerHTML=`
     <div class="w-head">
       <span class="w-id">◈</span>
@@ -981,7 +989,7 @@ function openTradeDetail(t){
       </div>
 
       <!-- Notes -->
-      ${t.notes?`<div style="padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted2);line-height:1.5;flex-shrink:0;max-height:48px;overflow-y:auto">
+      ${t.notes?`<div style="padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted2);line-height:1.6;flex-shrink:0">
         <span style="color:var(--amber);letter-spacing:1px;font-size:8px">NOTAS  </span>${esc(t.notes)}</div>`:''}
     </div>
     <div class="corner-bl"></div><div class="corner-br"></div>`;
