@@ -268,6 +268,12 @@ let activePhase  = null;
 let charts       = {};
 const world      = document.getElementById('world');
 
+// ── FINNHUB LIVE PRICES ───────────────────────────
+const FINNHUB_KEY  = 'd7f2ha1r01qi33g85oqgd7f2ha1r01qi33g85or0';
+const livePrice    = {};  // ticker → precio actual
+const livePrevClose= {};  // ticker → cierre anterior
+let   finnhubTimer = null;
+
 // ══════════════════════════════════════════════════
 // CANVAS: PAN + ZOOM
 // ══════════════════════════════════════════════════
@@ -377,6 +383,7 @@ async function loadData(){
 
   setStatus(`${allTrades.length} OPS LOADED`,'live');
   renderAll();
+  startFinnhubPolling();
 }
 
 function setPhase(ph){
@@ -392,6 +399,43 @@ function T(){
 }
 function CL(){return T().filter(t=>t.status==='GREEN'||t.status==='RED')}
 function OP(){return T().filter(t=>t.status==='OPEN')}
+
+// ══════════════════════════════════════════════════
+// FINNHUB POLLING
+// ══════════════════════════════════════════════════
+function startFinnhubPolling(){
+  if(finnhubTimer) clearInterval(finnhubTimer);
+  const tickers=[...new Set(OP().map(t=>t.ticker).filter(Boolean))];
+  if(!tickers.length) return;
+
+  async function fetchAll(){
+    for(const tk of tickers){
+      try{
+        const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${tk}&token=${FINNHUB_KEY}`);
+        const d=await r.json();
+        if(d&&d.c){livePrice[tk]=d.c; livePrevClose[tk]=d.pc;}
+      }catch(e){}
+    }
+    // Update Active Positions widget
+    renderOpen();
+    // Update detail panel live bar if open
+    const det=document.getElementById('w-detail');
+    if(det){
+      const tk=det.dataset.ticker;
+      const lp=livePrice[tk], pc=livePrevClose[tk];
+      const priceEl=det.querySelector('#detail-live-price');
+      const todayEl=det.querySelector('#detail-live-today');
+      if(priceEl&&lp) priceEl.textContent='€'+fmtP(lp);
+      if(todayEl&&lp&&pc){
+        const chg=lp-pc, pct=chg/pc*100;
+        todayEl.innerHTML='<span style="color:var(--text)">'+fmtEur(chg,2)+' ('+(pct>=0?'+':'')+pct.toFixed(2)+'%)</span> hoy';
+      }
+    }
+  }
+
+  fetchAll();
+  finnhubTimer=setInterval(fetchAll,60000);
+}
 
 // ══════════════════════════════════════════════════
 // RENDER ALL
@@ -578,13 +622,14 @@ function renderOpen(){
     const pct=pnl!==null?Math.abs(pnl)/maxAbsPnl*100:0;
     const dir=(t.direction||'BULL').slice(0,4).toUpperCase();
     // last check date for tooltip
-    const lastChk=allChecks.filter(c=>c.trade_id===t.id&&c.day_close!=null).sort((a,b)=>new Date(b.checked_at)-new Date(a.checked_at))[0];
-    const lastPriceStr=lastChk?`último precio: €${fmtP(lastChk.day_close)} (${fmtDate(lastChk.checked_at)})`:'sin datos de precio';
-    return `<div class="pos-row" data-id="${t.id}" title="${esc(lastPriceStr)}" style="cursor:pointer">
+    const live=livePrice[t.ticker];
+    const priceStr=live?`€${fmtP(live)} ●`:(() => { const c=latestCheckPrice(t.id); return c?`€${fmtP(c)}`:'—'; })();
+    const priceCol=live?'var(--amber)':'var(--muted2)';
+    return `<div class="pos-row" data-id="${t.id}" title="${live?'precio live':'último check'}" style="cursor:pointer">
       <div class="pos-tkr">${esc(t.ticker||'—')}</div>
       <div class="pos-dir" style="color:${dir==='BULL'?'var(--green)':'var(--red)'}">${dir}</div>
       <div class="pos-bar-outer"><div class="pos-bar-inner" style="width:${pct}%;background:${col}"></div></div>
-      <div class="pos-r" style="color:var(--muted2);font-size:9px;width:50px;text-align:right">${(+t.r_multiple||0)>=0?'+':''}${(+t.r_multiple||0).toFixed(2)}R</div>
+      <div class="pos-r" style="color:${priceCol};font-size:9px;width:60px;text-align:right;font-weight:${live?700:400}">${priceStr}</div>
       <div class="pos-pnl" style="color:${col};font-size:11px;font-weight:700;width:68px;text-align:right">${fmtEur(pnl,2)}</div>
     </div>`;
   }).join('');
@@ -771,7 +816,7 @@ function tradeCurrentValue(t){
 
   if(status==='GREEN') return val(+t.close_price||0);
   if(status==='RED')   return val(+t.stop_loss||0);
-  if(status==='OPEN')  return val(latestCheckPrice(t.id));
+  if(status==='OPEN')  return val(livePrice[t.ticker]||latestCheckPrice(t.id));
   return null;
 }
 
@@ -963,7 +1008,7 @@ function openTradeDetail(t){
   const pnlPct=invested&&pnl!==null?pnl/invested*100:null;
 
   const el=document.createElement('div');
-  el.className='w'; el.id='w-detail';
+  el.className='w'; el.id='w-detail'; el.dataset.ticker=t.ticker||'';
   el.style.cssText=`left:${dx}px;top:${dy}px;width:580px;height:600px;z-index:60;`;
   el.innerHTML=`
     <div class="w-head">
@@ -980,6 +1025,18 @@ function openTradeDetail(t){
         ${t.phase?`<span class="phase-lbl">${esc(t.phase)}</span>`:''}
         <span style="font-size:9px;color:var(--muted2);margin-left:auto">ID: ${t.id?t.id.slice(0,8)+'…':'—'}</span>
       </div>
+      ${t.status==='OPEN'?`
+      <!-- Live price bar -->
+      <div id="detail-live-bar" style="display:flex;align-items:center;gap:12px;padding:7px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(245,158,11,.04)">
+        <span style="font-size:8px;color:var(--amber);letter-spacing:2px">● LIVE</span>
+        <span id="detail-live-price" style="font-size:13px;font-weight:700;color:var(--amber)">${livePrice[t.ticker]?'€'+fmtP(livePrice[t.ticker]):'—'}</span>
+        <span id="detail-live-today" style="font-size:10px">${(()=>{
+          const lp=livePrice[t.ticker],pc=livePrevClose[t.ticker];
+          if(!lp||!pc) return '<span style="color:var(--muted2)">esperando datos...</span>';
+          const chg=lp-pc, pct=chg/pc*100;
+          return '<span style="color:var(--text)">'+fmtEur(chg,2)+' ('+(pct>=0?'+':'')+pct.toFixed(2)+'%)</span> hoy';
+        })()}</span>
+      </div>`:''}
 
       <!-- Price levels -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
