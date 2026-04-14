@@ -292,6 +292,9 @@ window.addEventListener('mousemove',e=>{
 });
 window.addEventListener('mouseup',()=>{panning=false;stage.classList.remove('panning')});
 stage.addEventListener('wheel',e=>{
+  // If cursor is inside a scrollable widget body, scroll it instead of zooming
+  const scrollEl=e.target.closest('.w-body.scroll');
+  if(scrollEl){e.stopPropagation();scrollEl.scrollTop+=e.deltaY;return;}
   e.preventDefault();
   const dz=-e.deltaY*.001;
   const nz=Math.min(2.5,Math.max(.2,zoom+dz));
@@ -577,7 +580,7 @@ function renderOpen(){
     // last check date for tooltip
     const lastChk=allChecks.filter(c=>c.trade_id===t.id&&c.day_close!=null).sort((a,b)=>new Date(b.checked_at)-new Date(a.checked_at))[0];
     const lastPriceStr=lastChk?`último precio: €${fmtP(lastChk.day_close)} (${fmtDate(lastChk.checked_at)})`:'sin datos de precio';
-    return `<div class="pos-row" title="${esc(lastPriceStr)}">
+    return `<div class="pos-row" data-id="${t.id}" title="${esc(lastPriceStr)}" style="cursor:pointer">
       <div class="pos-tkr">${esc(t.ticker||'—')}</div>
       <div class="pos-dir" style="color:${dir==='BULL'?'var(--green)':'var(--red)'}">${dir}</div>
       <div class="pos-bar-outer"><div class="pos-bar-inner" style="width:${pct}%;background:${col}"></div></div>
@@ -585,6 +588,16 @@ function renderOpen(){
       <div class="pos-pnl" style="color:${col};font-size:11px;font-weight:700;width:68px;text-align:right">${fmtEur(pnl,2)}</div>
     </div>`;
   }).join('');
+
+  // click → open detail panel
+  b.querySelectorAll('.pos-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const t=allTrades.find(x=>x.id===row.dataset.id);
+      if(t) openTradeDetail(t);
+    });
+    row.addEventListener('mouseenter',()=>row.style.outline='1px solid var(--amber)');
+    row.addEventListener('mouseleave',()=>row.style.outline='');
+  });
 }
 
 // ── 04 TRADE LOG ──────────────────────────────────
@@ -628,19 +641,19 @@ function renderLog(){
 // ── 05 MONTHLY P&L HEATMAP ────────────────────────
 function renderHeatmap(){
   const b=widget({id:'w05',num:5,title:'MONTHLY P&L HEATMAP',x:0,y:532,w:600,h:280});
-  const cl=CL().filter(t=>t.recommended_at);
+  const cl=CL().filter(t=>t.closed_at);
   if(!cl.length){b.innerHTML='<div class="empty"><span>🗓</span>NO DATA</div>';return;}
 
   const months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   const map={};
   cl.forEach(t=>{
-    const d=new Date(t.recommended_at);if(isNaN(d))return;
+    const d=new Date(t.closed_at);if(isNaN(d))return;
     const pnl=tradePnL(t);
     if(pnl===null)return;
     const k=`${d.getFullYear()}-${d.getMonth()}`;
     map[k]=(map[k]||0)+pnl;
   });
-  const years=[...new Set(cl.map(t=>new Date(t.recommended_at).getFullYear()).filter(y=>!isNaN(y)))].sort();
+  const years=[...new Set(cl.map(t=>new Date(t.closed_at).getFullYear()).filter(y=>!isNaN(y)))].sort();
   const vals=Object.values(map);
   const maxA=Math.max(...vals.map(Math.abs),.01);
   const tip=document.getElementById('tip');
@@ -1007,12 +1020,18 @@ function openTradeDetail(t){
     el.remove();
   };
 
-  // Draw chart
-  if(!checks.length&&!cierre) return;
+  // Draw chart — always render if we have reference prices, even without daily_checks
+  if(!checks.length&&!cierre&&!entry) return;
 
   // Build labels + closes, append close price as final point if trade is closed
-  const labels=checks.map(c=>c.checked_at.slice(0,10));
-  const closes=checks.map(c=>+c.day_close);
+  let labels=checks.map(c=>c.checked_at.slice(0,10));
+  let closes=checks.map(c=>+c.day_close);
+
+  // Always ensure x-axis has at least 2 points so reference lines can render
+  const axisStart=(t.recommended_at||new Date().toISOString()).slice(0,10);
+  const axisEnd=(t.closed_at||new Date().toISOString()).slice(0,10);
+  if(!labels.length||labels[0]>axisStart){labels.unshift(axisStart);closes.unshift(null);}
+  if(labels[labels.length-1]<axisEnd){labels.push(axisEnd);closes.push(null);}
   if(cierre&&t.closed_at){
     const closeDate=t.closed_at.slice(0,10);
     // only add if not already the last point
