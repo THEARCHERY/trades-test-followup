@@ -524,6 +524,7 @@ function renderEquity(){
   const b=widget({id:'w02',num:2,title:'EQUITY CURVE — PORTFOLIO VALUE',x:690,y:0,w:740,h:210,bodyClass:'p0'});
 
   const tradesWithInv=allTrades.filter(t=>
+    t.status!=='PENDING'&&
     t.invested_amount!=null&&+t.invested_amount>0&&
     t.entry_price!=null&&+t.entry_price>0
   );
@@ -902,6 +903,7 @@ function tradePnL(t){
 // Devuelve portfolioArr[last] − capitalArr[last]  (= el +60.73 de hoy)
 function totalPortfolioPnL(){
   const tradesWithInv=allTrades.filter(t=>
+    t.status!=='PENDING'&&
     t.invested_amount!=null&&+t.invested_amount>0&&
     t.entry_price!=null&&+t.entry_price>0
   );
