@@ -478,10 +478,12 @@ function renderOverview(){
   // Capital en riesgo: sum of invested_amount for open trades
   const capitalRiesgo=op.reduce((s,t)=>s+(+t.invested_amount||0),0);
 
-  // Disponible: total capital (capital_invertido) − open − pending
+  // Disponible: siempre sobre todos los trades (ignora filtro de fase)
   const totalCapital=allCapital.reduce((s,c)=>s+(+c.monto||0),0);
   const pendingInvested=pe.reduce((s,t)=>s+(+t.invested_amount||0),0);
-  const disponible=totalCapital-capitalRiesgo-pendingInvested;
+  const allOpenInvested=allTrades.filter(t=>t.status==='OPEN').reduce((s,t)=>s+(+t.invested_amount||0),0);
+  const allPendingInvested=allTrades.filter(t=>t.status==='PENDING').reduce((s,t)=>s+(+t.invested_amount||0),0);
+  const disponible=totalCapital-allOpenInvested-allPendingInvested;
 
   b.innerHTML=`<div class="stat-row x4" style="height:100%">
     <div class="stat-block amber">
@@ -902,7 +904,7 @@ function tradePnL(t){
 // Total portfolio P&L — copia exacta del loop día a día de index.html
 // Devuelve portfolioArr[last] − capitalArr[last]  (= el +60.73 de hoy)
 function totalPortfolioPnL(){
-  const tradesWithInv=allTrades.filter(t=>
+  const tradesWithInv=T().filter(t=>
     t.status!=='PENDING'&&
     t.invested_amount!=null&&+t.invested_amount>0&&
     t.entry_price!=null&&+t.entry_price>0
